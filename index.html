@@ -33,7 +33,11 @@
   #main { flex:1; display:flex; flex-direction:column; align-items:center; width:100%; max-width:900px; margin:0 auto; padding:0 18px; }
   #hero { text-align:center; padding-top:17vh; }
   body.has-messages #hero { display:none; }
-  #spiralLogo { width:150px; height:150px; margin-bottom:26px; }
+  #spiralLogo { width:150px; height:150px; margin-bottom:26px; overflow:visible; filter:drop-shadow(0 0 34px rgba(255,139,126,.22)); will-change:transform; }
+  #spiralPath { stroke-dasharray:1; stroke-dashoffset:1; }
+  #spiralDisc { opacity:0; }
+  @keyframes fadeUp { from { opacity:0; transform:translateY(16px); } to { opacity:1; transform:none; } }
+  #hero.intro #greeting { animation:fadeUp 1s cubic-bezier(.2,.8,.2,1) 1.5s both; }
   #greeting { font-size:33px; font-weight:500; }
   #greeting .accent { color:var(--accent); }
 
@@ -101,6 +105,8 @@
   .model-opt .tag.pro { background:#3a2a1e; color:#ffb26b; }
   .model-opt .tag.best { background:#1c2e4d; color:#86b9ff; }
   .resumed { margin-top:10px; opacity:.55; }
+  .review-note { margin-top:12px; font-size:12px; color:#8a8a8a; font-style:italic; }
+  .improved { margin-top:8px; padding-top:10px; border-top:1px solid #2e2e2e; }
   /* family chips inside the All tab */
   #famRow { display:flex; gap:6px; padding:2px 2px 10px; overflow-x:auto; }
   .famchip { flex-shrink:0; display:flex; align-items:center; gap:6px; padding:7px 12px; border-radius:16px; background:#141414;
@@ -146,9 +152,8 @@
 <main id="main">
   <div id="hero">
     <svg id="spiralLogo" viewBox="0 0 100 100">
-      <circle cx="50" cy="50" r="47" fill="#d9d9d9"/>
-      <path d="M50 50 m0 -3 a3 3 0 1 1 -3 3 a6 6 0 1 1 6 -6 a9 9 0 1 1 -9 9 a12 12 0 1 1 12 -12 a15 15 0 1 1 -15 15 a18 18 0 1 1 18 -18 a21 21 0 1 1 -21 21 a24 24 0 1 1 24 -24 a27 27 0 1 1 -27 27 a30 30 0 1 1 30 -30 a33 33 0 1 1 -33 33 a36 36 0 1 1 36 -36 a39 39 0 1 1 -39 39 a42 42 0 1 1 44 -40"
-        fill="none" stroke="#000" stroke-width="4.5" stroke-linecap="round"/>
+      <circle id="spiralDisc" cx="50" cy="50" r="47" fill="#d9d9d9"/>
+      <g id="spiralRot"><path id="spiralPath" pathLength="1" fill="none" stroke="#000" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"/></g>
     </svg>
     <h1 id="greeting">Good Evening's <span class="accent">User</span></h1>
   </div>
@@ -188,6 +193,16 @@
 </div>
 
 <script>
+/* ================= SPIRAL LOGO PATH ================= */
+const SPIRAL_D = (function(){
+  const n = 480, turns = 5, R = 40.5; let d = '';
+  for (let i = 0; i <= n; i++){
+    const th = Math.PI * 2 * turns * i / n - Math.PI / 2, r = R * (0.05 + 0.95 * i / n);
+    d += (i ? 'L' : 'M') + (50 + Math.cos(th) * r).toFixed(2) + ' ' + (50 + Math.sin(th) * r).toFixed(2);
+  }
+  return d;
+})();
+
 /* ================= LOGOS & MODEL CATALOG ================= */
 const LG = {
   anthropic:'https://cdn.xtrouter.com/tag-images/Anthropic_dark.svg',
@@ -210,7 +225,7 @@ const COMPANIES = [
 const mk = (id,name,fam,tier,opts) => {
   const co = COMPANIES.find(c => c.id === fam);
   opts = opts || {};
-  return { id, name, fam, owner:co.owner, logo:opts.logo || co.logo || '', pro: tier === 'pro', smart: !!opts.smart };
+  return { id, name, fam, owner:co.owner, logo:opts.logo || co.logo || '', pro: tier === 'pro', smart: !!opts.smart, engine: opts.engine || 'gpt' };
 };
 
 const MODELS = [
@@ -251,6 +266,7 @@ const MODELS = [
   mk('o4mini','o4-mini','chatgpt','free'),
   mk('o1','o1','chatgpt','free'),
   /* Google */
+  mk('gem4argon','Gemini 4 Argon','gemini','free',{ smart:true, engine:'qwen' }),
   mk('gem35','Gemini 3.5 Pro','gemini','free'),
   mk('gemflash','Gemini Flash','gemini','free'),
   mk('gem25','Gemini 2.5 Pro','gemini','free'),
@@ -415,12 +431,35 @@ function renderSidebar(){
     list.appendChild(d);
   });
 }
+/* ================= LOGO INTRO ================= */
+let logoRaf = 0;
+function playLogoIntro(){
+  const path = $('#spiralPath'), rot = $('#spiralRot'), disc = $('#spiralDisc'), logo = $('#spiralLogo'), hero = $('#hero');
+  path.setAttribute('d', SPIRAL_D);
+  cancelAnimationFrame(logoRaf);
+  hero.classList.remove('intro'); void hero.offsetWidth; hero.classList.add('intro');
+  if (matchMedia('(prefers-reduced-motion: reduce)').matches){ path.style.strokeDashoffset = 0; disc.style.opacity = 1; return; }
+  const eo3 = x => 1 - Math.pow(1 - x, 3), eo4 = x => 1 - Math.pow(1 - x, 4);
+  let t0 = null;
+  function step(ts){
+    if (t0 === null) t0 = ts;
+    const t = ts - t0;
+    path.style.strokeDashoffset = 1 - eo3(Math.min(1, Math.max(0, (t - 250) / 2100)));
+    disc.style.opacity = Math.min(1, t / 700);
+    logo.style.transform = 'scale(' + (0.8 + 0.2 * eo3(Math.min(1, t / 1000))) + ')';
+    rot.setAttribute('transform', 'rotate(' + (-220 * (1 - eo4(Math.min(1, t / 2600))) + t * 0.0045).toFixed(3) + ' 50 50)');
+    if (!document.body.classList.contains('has-messages')) logoRaf = requestAnimationFrame(step);
+  }
+  logoRaf = requestAnimationFrame(step);
+}
+
 function newChat(){
   state.chatId = null; state.titlePending = false;
   messagesEl.innerHTML = '';
   document.body.classList.remove('has-messages');
   inputEl.value = ''; autoGrow();
   renderSidebar();
+  playLogoIntro();
 }
 $('#newChatBtn').onclick = () => { newChat(); document.body.classList.remove('sidebar-open'); };
 function loadChat(id){
@@ -468,9 +507,7 @@ function autoGrow(){ inputEl.style.height = 'auto'; inputEl.style.height = Math.
 inputEl.addEventListener('input', autoGrow);
 inputEl.addEventListener('keydown', e => { if (e.key === 'Enter' && !e.shiftKey){ e.preventDefault(); send(); } });
 
-const MINI_SPIRAL = `<svg class="mini-spiral" viewBox="0 0 100 100"><circle cx="50" cy="50" r="46" fill="#cfcfcf"/>
-  <path d="M50 50 m0 -4 a4 4 0 1 1 -4 4 a9 9 0 1 1 9 -9 a14 14 0 1 1 -14 14 a19 19 0 1 1 19 -19 a24 24 0 1 1 -24 24 a29 29 0 1 1 29 -29 a34 34 0 1 1 -34 34 a39 39 0 1 1 42 -36"
-  fill="none" stroke="#000" stroke-width="7" stroke-linecap="round"/></svg>`;
+const MINI_SPIRAL = `<svg class="mini-spiral" viewBox="0 0 100 100"><circle cx="50" cy="50" r="47" fill="#cfcfcf"/><path d="${SPIRAL_D}" fill="none" stroke="#000" stroke-width="6.5" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
 
 function addMsg(role, text, who, animate = true){
   const d = document.createElement('div');
@@ -534,7 +571,7 @@ const OVH_LLAMA = 'Meta-Llama-3_3-70B-Instruct';
 const OVH_MISTRAL = 'Mistral-Small-3.2-24B-Instruct-2506';
 function ovhChain(){
   const fam = state.model.fam;
-  const first = (fam === 'qwen' || fam === 'deepseek') ? OVH_QWEN : [OVH_GPT];
+  const first = (fam === 'qwen' || fam === 'deepseek' || state.model.engine === 'qwen') ? OVH_QWEN : [OVH_GPT];
   return [...new Set([...first, OVH_GPT, ...OVH_QWEN, OVH_LLAMA, OVH_MISTRAL])];
 }
 /* Codex always reasons at HIGH effort (smartest, slower). Everything else stays fast unless Freq is 4-5. */
@@ -576,7 +613,11 @@ async function tryOVH(messages, onChunk, onReason, ctrl){
   if (raceable){ try { await raceOVH(messages, onChunk, onReason, ctrl); return; } catch(e){ if (e.name === 'AbortError') throw e; } }
   for (const m of ovhChain()){
     try {
-      await ovhCall(m, m.startsWith('gpt-oss') ? { reasoning_effort: effortFor(), temperature: state.model.smart ? 0.2 : 0.5 } : null, messages, onChunk, onReason, ctrl.signal);
+      const isGpt = m.startsWith('gpt-oss'), isQwen = m.toLowerCase().startsWith('qwen');
+      const extra = isGpt ? { reasoning_effort: effortFor(), temperature: state.model.smart ? 0.2 : 0.5 }
+                  : isQwen ? { chat_template_kwargs:{ enable_thinking: !!(state.model.smart || state.freq >= 4) }, temperature: state.model.smart ? 0.3 : 0.5 }
+                  : null;
+      await ovhCall(m, extra, messages, onChunk, onReason, ctrl.signal);
       return;
     } catch(e){ if (e.name === 'AbortError') throw e; }
   }
@@ -674,6 +715,45 @@ function setPending(o){ try { localStorage.setItem(PENDING_KEY, JSON.stringify(o
 function getPending(){ try { return JSON.parse(localStorage.getItem(PENDING_KEY) || 'null'); } catch(e){ return null; } }
 function clearPending(){ try { localStorage.removeItem(PENDING_KEY); } catch(e){} }
 
+async function selfReview(saved, userText, draft, body, m){
+  const note = document.createElement('div');
+  note.className = 'review-note';
+  note.textContent = 'Reviewing the code for bugs...';
+  body.appendChild(note);
+  const imp = document.createElement('div'); imp.className = 'improved';
+  const reviewers = m.engine === 'qwen'
+    ? [{ model:OVH_GPT, extra:{ reasoning_effort:'medium', temperature:0.2 } }]
+    : OVH_QWEN.map(q => ({ model:q, extra:{ chat_template_kwargs:{ enable_thinking:false }, temperature:0.2 } }));
+  const msgs = [
+    { role:'system', content:'You are a meticulous senior code reviewer and debugger. You find real bugs: syntax errors, runtime errors, wrong logic, missing pieces, broken controls, anything that stops the code from working as requested. Never use emojis.' },
+    { role:'user', content:'REQUEST:\n' + userText + '\n\nDRAFT ANSWER:\n' + draft + '\n\nAudit the code in the draft line by line. If it is correct and complete, reply with exactly NO_ISSUES and nothing else. Otherwise reply with the COMPLETE corrected code (every file in full, each in its own fenced code block with a language tag), then one short line starting with "Fixes:" that lists what you changed.' },
+  ];
+  const ctrl = new AbortController();
+  const to = setTimeout(() => ctrl.abort(), 240000);
+  let r = '', shown = false;
+  try {
+    for (const rv of reviewers){
+      try {
+        r = ''; 
+        await ovhCall(rv.model, rv.extra, msgs, c => {
+          r += c;
+          if (!shown && r.includes('```')){ shown = true; note.textContent = 'Found improvements, applying the fixed version'; body.appendChild(imp); }
+          if (shown){ imp.innerHTML = renderMd(r); window.scrollTo({ top: document.body.scrollHeight }); }
+        }, null, ctrl.signal);
+        break;
+      } catch(e){ if (e.name === 'AbortError') throw e; r = ''; }
+    }
+    if (shown){
+      note.textContent = 'Improved after self-review';
+      saved.text += '\n\n**Improved version after self-review:**\n\n' + r;
+      saveChats();
+    } else if (r.trim()){
+      note.textContent = 'Reviewed: no issues found';
+    } else note.remove();
+  } catch(e){ note.remove(); if (shown) imp.remove(); }
+  finally { clearTimeout(to); }
+}
+
 async function generate(chat, text, m, partial){
   sendBtn.disabled = true; state.generating = true;
   const aiMsg = addMsg('ai', '', { name:m.name, owner:m.owner, logo:m.logo });
@@ -713,9 +793,11 @@ async function generate(chat, text, m, partial){
       out = await aiChat(convo());
     }
     body.innerHTML = renderMd(out);
-    chat.msgs.push({ role:'ai', text:out, who:{ name:m.name, owner:m.owner, logo:m.logo } });
+    const saved = { role:'ai', text:out, who:{ name:m.name, owner:m.owner, logo:m.logo } };
+    chat.msgs.push(saved);
     saveChats();
     maybeTitle(chat, text);
+    if (m.smart && /```/.test(out)) await selfReview(saved, text, out, body, m);
   } catch(err) {
     const msg = err && err.name === 'AbortError' ? 'The AI took too long. Try a lower frequency.' : (err && err.message) || 'Unknown error';
     body.innerHTML = `<span style="color:#ff8a80">${escapeHtml(m.name)} failed: ${escapeHtml(msg)}</span>`;
@@ -742,6 +824,7 @@ sendBtn.onclick = send;
 /* ================= INIT ================= */
 syncPills();
 renderSidebar();
+playLogoIntro();
 if (state.chats.length) loadChat(state.chats[state.chats.length-1].id);
 
 /* resume an unfinished answer after a reload / reopening Chrome */
