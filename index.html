@@ -134,6 +134,41 @@
   @keyframes flash { 0%,100%{opacity:1;} 50%{opacity:.35;} }
   #freqBadge.danger { border-color:#ff5347; color:#ff5347; animation:flash .8s infinite; }
 
+  #attachTray { display:flex; flex-wrap:wrap; gap:8px; }
+  #attachTray:empty { display:none; }
+  .achip { position:relative; display:flex; align-items:center; gap:8px; background:#1f1f1f; border:1px solid #3a3a3a; border-radius:14px; padding:6px 30px 6px 6px; max-width:100%; font-size:13px; color:#ddd; }
+  .achip img { width:40px; height:40px; border-radius:9px; object-fit:cover; }
+  .achip .aico { width:40px; height:40px; border-radius:9px; background:#2c2c2c; display:flex; align-items:center; justify-content:center; }
+  .achip .anm { max-width:150px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .achip button { position:absolute; right:6px; top:50%; transform:translateY(-50%); background:none; border:none; color:#999; font-size:18px; cursor:pointer; padding:2px 4px; }
+  #plusBtn { width:44px; height:44px; border-radius:50%; border:1px solid #3a3a3a; background:#242424; color:#fff; display:flex; align-items:center; justify-content:center; cursor:pointer; padding:0; flex-shrink:0; }
+  #plusBtn:hover { background:#2e2e2e; }
+  #toast { position:fixed; left:50%; bottom:150px; transform:translateX(-50%); background:#2c2c2c; color:#fff; padding:10px 16px; border-radius:14px; font-size:13px; z-index:120; opacity:0; pointer-events:none; transition:.25s; max-width:90vw; text-align:center; }
+  #toast.show { opacity:1; }
+  .mchips { display:flex; flex-wrap:wrap; gap:6px; margin-top:8px; }
+  .mchips img { width:64px; height:64px; border-radius:10px; object-fit:cover; }
+  .mchips .mf { background:#2c2c2c; border-radius:10px; padding:6px 10px; font-size:12px; color:#ccc; }
+  .askcard .askq { font-size:16px; font-weight:600; margin:2px 0 12px; }
+  .askopt { display:flex; align-items:center; gap:12px; width:100%; text-align:left; background:#262626; border:1px solid #3a3a3a; border-radius:14px; padding:12px 14px; margin-bottom:10px; color:#fff; cursor:pointer; font-family:inherit; }
+  .askopt:last-child { margin-bottom:0; }
+  .askopt:hover { background:#2f2f2f; border-color:#555; }
+  .askopt b { width:30px; height:30px; border-radius:50%; background:#fff; color:#000; display:flex; align-items:center; justify-content:center; font-size:14px; flex-shrink:0; }
+  .askopt span { display:flex; flex-direction:column; gap:2px; }
+  .askopt i { font-style:normal; font-size:15px; font-weight:600; }
+  .askopt small { font-size:12px; color:#999; }
+  .filecard .codehead { justify-content:flex-start; }
+  .filecard .fileic { display:flex; margin-right:8px; }
+  .filecard .fname { color:#eee; font-weight:600; }
+  .filecard .fstat { margin-left:auto; color:#8a8a8a; }
+  .fcpre { max-height:300px; overflow:auto; }
+  .fcfoot { display:flex; gap:10px; align-items:center; padding:10px 12px; border-top:1px solid #2c2c2c; background:#141414; }
+  .dlbtn { background:#fff; color:#000; border:none; border-radius:10px; padding:9px 16px; font-size:13px; font-weight:700; cursor:pointer; font-family:inherit; }
+  .genbar { flex:1; height:6px; border-radius:3px; background:#2c2c2c; overflow:hidden; }
+  .genbar i { display:block; height:100%; width:40%; border-radius:3px; background:linear-gradient(90deg,#ff8b7e,#8f7bff); animation:genmove 1.2s ease-in-out infinite; }
+  @keyframes genmove { 0% { transform:translateX(-100%); } 100% { transform:translateX(350%); } }
+  .gentxt { font-size:12px; color:#8a8a8a; }
+  .cursor { display:inline-block; width:8px; height:15px; background:#ff8b7e; vertical-align:-2px; margin-left:1px; animation:blink2 .8s steps(1) infinite; }
+  @keyframes blink2 { 50% { opacity:0; } }
   @media (max-width:560px){ #greeting{font-size:24px;} .msg{max-width:92%;} }
 </style>
 </head>
@@ -161,8 +196,10 @@
 
   <div id="inputWrap">
     <div id="inputBar">
+      <div id="attachTray"></div>
       <textarea id="input" rows="1" placeholder="Type Anything"></textarea>
       <div id="pillRow">
+        <button id="plusBtn" type="button" aria-label="Attach files or images"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></button>
         <div class="pill" id="modelPill"><img id="modelLogo" src=""><span id="modelName">Opus 5.5</span></div>
         <div class="pill" id="allModelsBtn">All Models</div>
         <div class="pill" id="freqBadge">Freq: <span id="freqLabel">1</span></div>
@@ -172,6 +209,8 @@
   </div>
 </main>
 
+<input type="file" id="fileIn" multiple hidden accept="image/*,text/*,application/json,.txt,.md,.json,.csv,.tsv,.js,.mjs,.ts,.jsx,.tsx,.html,.htm,.css,.scss,.py,.java,.c,.h,.cpp,.hpp,.cs,.go,.rs,.php,.rb,.sh,.bat,.sql,.xml,.yml,.yaml,.toml,.ini,.cfg,.log,.lua,.kt,.swift,.vue,.svelte">
+<div id="toast"></div>
 <div class="popup" id="modelPopup"></div>
 
 <div class="popup" id="freqPopup">
@@ -310,6 +349,7 @@ let state = {
   chats: JSON.parse(localStorage.getItem('spiral_chats') || '[]'),
   generating: false,
   titlePending: false,
+  attach: [], ask: null, hard: false,
 };
 
 /* ================= DOM ================= */
@@ -458,6 +498,7 @@ function newChat(){
   messagesEl.innerHTML = '';
   document.body.classList.remove('has-messages');
   inputEl.value = ''; autoGrow();
+  dismissAsk(); state.attach = []; renderTray();
   renderSidebar();
   playLogoIntro();
 }
@@ -466,7 +507,7 @@ function loadChat(id){
   const c = state.chats.find(x => x.id === id); if (!c) return;
   state.chatId = id;
   messagesEl.innerHTML = '';
-  c.msgs.forEach(m => addMsg(m.role, m.text, m.who, false));
+  c.msgs.forEach(m => addMsg(m.role, m.text, m.who, false, m.files));
   if (c.msgs.length) document.body.classList.add('has-messages');
   renderSidebar();
 }
@@ -476,19 +517,34 @@ function escapeHtml(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt
 function codeBox(lang, code){
   return `<div class="codewrap"><div class="codehead"><span>${lang || 'code'}</span><button class="copybtn" type="button">Copy</button></div><pre class="codepre">${code.replace(/\n+$/,'')}</pre></div>`;
 }
+const FILE_RE = /FILENAME:[ \t]*([^\n`]+?)[ \t]*\n+```([\w+#-]*)[ \t]*\n?([\s\S]*?)(```|$)/g;
+function fileCard(name, lang, code, closed){
+  const safe = name.replace(/[^\w.\- ]+/g, '').trim() || 'code.txt';
+  code = code.replace(/\n+$/, '');
+  const ic = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#bbb" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/></svg>';
+  return `<div class="codewrap filecard ${closed ? 'done' : 'live'}" data-name="${safe}"><div class="codehead"><span class="fileic">${ic}</span><span class="fname">${safe}</span><span class="fstat">${closed ? code.split('\n').length + ' lines' : 'Writing'}</span></div><pre class="codepre fcpre">${code}${closed ? '' : '<span class="cursor"></span>'}</pre><div class="fcfoot">${closed ? `<button class="dlbtn" type="button">Download ${safe}</button><button class="copybtn" type="button">Copy</button>` : '<div class="genbar"><i></i></div><span class="gentxt">Writing the file...</span>'}</div></div>`;
+}
 function renderMd(text){
   text = String(text).replace(/<think>[\s\S]*?(<\/think>|$)/g, '');   /* hide reasoning blocks */
-  let t = escapeHtml(text);
-  /* closed code fences, then a still-streaming unclosed fence */
-  t = t.replace(/```([\w+#-]*)[ \t]*\n?([\s\S]*?)```/g, (m,l,c) => codeBox(l, c));
-  t = t.replace(/```([\w+#-]*)[ \t]*\n?([\s\S]*)$/, (m,l,c) => codeBox(l, c));
-  /* only style bold/italic outside code boxes */
-  t = t.split(/(<div class="codewrap">[\s\S]*?<\/pre><\/div>)/).map(p =>
-    p.startsWith('<div class="codewrap">') ? p :
-    p.replace(/\*\*(.+?)\*\*/g, '<b>$1</b>').replace(/\*(.+?)\*/g, '<i>$1</i>')
-     .replace(/`([^`\n]+)`/g, '<code class="inl">$1</code>')).join('');
-  return t;
+  let t = escapeHtml(text); const stash = [];
+  const keep = h => { stash.push(h); return '\u0000' + (stash.length - 1) + '\u0000'; };
+  t = t.replace(FILE_RE, (m, n, l, c, e) => keep(fileCard(n.trim(), l, c, e === '```')));
+  t = t.replace(/```([\w+#-]*)[ \t]*\n?([\s\S]*?)```/g, (m, l, c) => keep(codeBox(l, c)));
+  t = t.replace(/```([\w+#-]*)[ \t]*\n?([\s\S]*)$/, (m, l, c) => keep(codeBox(l, c)));
+  t = t.replace(/\*\*(.+?)\*\*/g, '<b>$1</b>').replace(/\*(.+?)\*/g, '<i>$1</i>').replace(/`([^`\n]+)`/g, '<code class="inl">$1</code>');
+  return t.replace(/\u0000(\d+)\u0000/g, (m, i) => stash[+i]);
 }
+/* download button on file cards */
+document.addEventListener('click', e => {
+  const b = e.target.closest('.dlbtn'); if (!b) return;
+  const card = b.closest('.filecard'), name = card.dataset.name || 'code.txt';
+  const code = card.querySelector('.codepre').textContent;
+  const type = /\.html?$/i.test(name) ? 'text/html' : /\.json$/i.test(name) ? 'application/json' : 'text/plain';
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([code], { type: type + ';charset=utf-8' }));
+  a.download = name; document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+});
 /* copy button (event delegation) */
 document.addEventListener('click', e => {
   const b = e.target.closest('.copybtn'); if (!b) return;
@@ -509,13 +565,23 @@ inputEl.addEventListener('keydown', e => { if (e.key === 'Enter' && !e.shiftKey)
 
 const MINI_SPIRAL = `<svg class="mini-spiral" viewBox="0 0 100 100"><circle cx="50" cy="50" r="47" fill="#cfcfcf"/><path d="${SPIRAL_D}" fill="none" stroke="#000" stroke-width="6.5" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
 
-function addMsg(role, text, who, animate = true){
+function addMsg(role, text, who, animate = true, files){
   const d = document.createElement('div');
   d.className = 'msg ' + role;
   if (role === 'ai'){
     d.innerHTML = `<div class="who">${who.logo ? `<img src="${who.logo}" onerror="this.style.display='none'">` : ''}${who.name} · by ${who.owner}</div><div class="body"></div>`;
     d.querySelector('.body').innerHTML = renderMd(text);
-  } else d.textContent = text;
+  } else {
+    d.textContent = text;
+    if (files && files.length){
+      const row = document.createElement('div'); row.className = 'mchips';
+      files.forEach(f => {
+        if (f.kind === 'image' && f.thumb){ const im = document.createElement('img'); im.src = f.thumb; row.appendChild(im); }
+        else { const sp = document.createElement('span'); sp.className = 'mf'; sp.textContent = f.name; row.appendChild(sp); }
+      });
+      d.appendChild(row);
+    }
+  }
   messagesEl.appendChild(d);
   document.body.classList.add('has-messages');
   window.scrollTo({ top: document.body.scrollHeight, behavior: animate ? 'smooth' : 'auto' });
@@ -575,8 +641,10 @@ function ovhChain(){
   return [...new Set([...first, OVH_GPT, ...OVH_QWEN, OVH_LLAMA, OVH_MISTRAL])];
 }
 /* Codex always reasons at HIGH effort (smartest, slower). Everything else stays fast unless Freq is 4-5. */
-function effortFor(){ return (state.model.smart || state.freq >= 4) ? 'high' : 'low'; }
+function effortFor(){ return (state.model.smart || state.freq >= 4) ? 'high' : (state.hard ? 'medium' : 'low'); }
 const OVH_TITLE_MODELS = [OVH_LLAMA, OVH_MISTRAL];
+const VISION_MODELS = ['Qwen2.5-VL-72B-Instruct', 'qwen2.5-vl-72b-instruct', 'Qwen3.5-397B-A17B', 'qwen3.5-397b-a17b'];
+const hasImage = msgs => msgs.some(x => Array.isArray(x.content) && x.content.some(p => p.type === 'image_url'));
 
 /* ============ PROVIDER 2+3: Pollinations — fast flash model, then default ============ */
 const POLL_URL = 'https://text.pollinations.ai/';
@@ -609,7 +677,14 @@ async function raceOVH(messages, onChunk, onReason, ctrl){
   catch(e){ if (ctrl.signal.aborted){ const a = new Error('aborted'); a.name = 'AbortError'; throw a; } throw new Error('OVH unavailable'); }
 }
 async function tryOVH(messages, onChunk, onReason, ctrl){
-  const raceable = state.freq < 4 && !state.model.smart;
+  if (hasImage(messages)){
+    for (const m of VISION_MODELS){
+      try { await ovhCall(m, /qwen3/i.test(m) ? { chat_template_kwargs:{ enable_thinking:false }, temperature:0.3 } : { temperature:0.3 }, messages, onChunk, onReason, ctrl.signal); return; }
+      catch(e){ if (e.name === 'AbortError') throw e; }
+    }
+    throw new Error('OVH vision unavailable');
+  }
+  const raceable = state.freq < 4 && !state.model.smart && !state.hard;
   if (raceable){ try { await raceOVH(messages, onChunk, onReason, ctrl); return; } catch(e){ if (e.name === 'AbortError') throw e; } }
   for (const m of ovhChain()){
     try {
@@ -673,25 +748,34 @@ async function aiChat(messages, timeoutMs = 60000){
 }
 
 /* Persona comes from the prompt only — never mention Spiral or any backend. */
-function systemPrompt(){
+function systemPrompt(mode){
   const m = state.model;
-  return `You are ${m.name}, an AI assistant made by ${m.owner}. If asked who you are, what model you are or who made you, answer that you are ${m.name} by ${m.owner}, and never claim to be any other model or company.
+  const now = new Date().toLocaleString('en-US', { dateStyle:'full', timeStyle:'short' });
+  let fmt = '';
+  if (mode === 'file') fmt = '\n\nOUTPUT FORMAT (strict): the user wants a DOWNLOADABLE FILE. The very first characters of your reply must be the line "FILENAME: <name.ext>" (a short sensible name with the right extension), then ONE fenced code block with a language tag holding the COMPLETE, ready-to-run file. For web projects make a single self-contained .html file with inline CSS and JS. Never split the file across several blocks. After the code block add at most two short sentences.';
+  else if (mode === 'code') fmt = '\n\nOUTPUT FORMAT: the user wants CODE TO COPY AND PASTE. Start with at most one short sentence, then give the complete code in fenced code blocks with language tags (one block per file, each preceded by a short line naming the file). Do not write a FILENAME line.';
+  return `You are ${m.name}, an AI assistant made by ${m.owner}. If asked who you are, what model you are or who made you, answer that you are ${m.name} by ${m.owner}, and never claim to be any other model or company. Current date and time: ${now}.
 
-Personality: warm, friendly, respectful and natural, like a skilled friend. Always reply to what the person actually said. Greet back when greeted ("Hello!", "Hi, how can I help?"), say thanks and please when it fits, answer small talk and questions in plain conversational language, and be patient and polite even if the person is blunt. Match their language. Never be cold, robotic or dismissive, and never answer a greeting by asking what to build.
+Personality: warm, friendly, respectful and natural, like a skilled friend. Always reply to what the person actually said. Greet back when greeted, say thanks and please when it fits, and be patient and polite even if the person is blunt. Reply in the same language the person writes in. Never be cold, robotic or dismissive, and never answer a greeting by asking what to build.
 
-Engineering skill: you are also an expert senior software engineer and game developer. When (and only when) the person asks you to build or fix something such as a game, app, website or tool, deliver the FULL, complete, working implementation, never a basic demo, stub, placeholder or TODO, and never say it is too complex. Plan the architecture and edge cases silently first; for games include a real game loop, keyboard and touch controls, collisions, score, game over and restart, and good lighting and visuals. Put all code in fenced code blocks with a language tag. If they ask for a single file, deliver exactly one self-contained file (load libraries only from cdnjs.cloudflare.com or cdn.jsdelivr.net). Mentally run the code and fix bugs before answering, and keep the prose around code short.${m.smart ? ' You are in maximum-intelligence mode: reason carefully like a principal engineer, consider edge cases and performance, verify the logic step by step, and deliver production-quality, bug-free work.' : ''}
+How you think: understand the real goal behind the message and use the earlier messages of the conversation. Work out hard problems step by step and double-check facts, maths and logic before answering. Give a direct answer first, then only the detail that helps. If something is truly ambiguous, ask one short clarifying question; otherwise make sensible assumptions and say them. Be honest when you are unsure and never invent facts, sources or code libraries. The person may attach images or files: study them carefully and base your answer on what is really in them.
+
+Engineering skill: you are an expert senior software engineer and game developer. When (and only when) asked to build or fix something, deliver the FULL, complete, working implementation, never a basic demo, stub, placeholder or TODO, and never say it is too complex. Plan the architecture and edge cases silently first; for games include a real game loop, keyboard and touch controls, collisions, score, game over and restart, and good visuals. Load libraries only from cdnjs.cloudflare.com or cdn.jsdelivr.net. Mentally run the code and fix bugs before answering, and keep prose around code short.${m.smart ? ' You are in maximum-intelligence mode: reason carefully like a principal engineer, consider edge cases and performance, verify the logic step by step, and deliver production-quality, bug-free work.' : ''}${fmt}
 
 Never use emojis.`;
 }
 
-async function ensureChat(userText){
+async function ensureChat(userText, files, ctx){
   if (!state.chatId){
     state.chats.push({ id:'c'+Date.now(), title:'New chat', msgs:[], created:Date.now() });
     state.chatId = state.chats[state.chats.length-1].id;
     state.titlePending = true;
   }
   const chat = state.chats.find(c => c.id === state.chatId);
-  chat.msgs.push({ role:'user', text:userText });
+  const msg = { role:'user', text:userText };
+  if (files && files.length) msg.files = files;
+  if (ctx) msg.ctx = ctx.slice(0, 20000);
+  chat.msgs.push(msg);
   saveChats(); renderSidebar();
   return chat;
 }
@@ -715,7 +799,8 @@ function setPending(o){ try { localStorage.setItem(PENDING_KEY, JSON.stringify(o
 function getPending(){ try { return JSON.parse(localStorage.getItem(PENDING_KEY) || 'null'); } catch(e){ return null; } }
 function clearPending(){ try { localStorage.removeItem(PENDING_KEY); } catch(e){} }
 
-async function selfReview(saved, userText, draft, body, m){
+async function selfReview(saved, userText, draft, body, m, mode){
+  const fm = draft.match(/FILENAME:[ \t]*([^\n]+)/); const fname = fm ? fm[1].trim() : 'code.txt';
   const note = document.createElement('div');
   note.className = 'review-note';
   note.textContent = 'Reviewing the code for bugs...';
@@ -726,7 +811,7 @@ async function selfReview(saved, userText, draft, body, m){
     : OVH_QWEN.map(q => ({ model:q, extra:{ chat_template_kwargs:{ enable_thinking:false }, temperature:0.2 } }));
   const msgs = [
     { role:'system', content:'You are a meticulous senior code reviewer and debugger. You find real bugs: syntax errors, runtime errors, wrong logic, missing pieces, broken controls, anything that stops the code from working as requested. Never use emojis.' },
-    { role:'user', content:'REQUEST:\n' + userText + '\n\nDRAFT ANSWER:\n' + draft + '\n\nAudit the code in the draft line by line. If it is correct and complete, reply with exactly NO_ISSUES and nothing else. Otherwise reply with the COMPLETE corrected code (every file in full, each in its own fenced code block with a language tag), then one short line starting with "Fixes:" that lists what you changed.' },
+    { role:'user', content:'REQUEST:\n' + userText + '\n\nDRAFT ANSWER:\n' + draft + '\n\nAudit the code in the draft line by line. If it is correct and complete, reply with exactly NO_ISSUES and nothing else. Otherwise reply with the COMPLETE corrected code (every file in full, each in its own fenced code block with a language tag), then one short line starting with "Fixes:" that lists what you changed.' + (mode === 'file' ? ' IMPORTANT: your reply must begin with the line "FILENAME: ' + fname + '" followed by ONE fenced code block holding the complete corrected file, then the Fixes line.' : '') },
   ];
   const ctrl = new AbortController();
   const to = setTimeout(() => ctrl.abort(), 240000);
@@ -754,24 +839,36 @@ async function selfReview(saved, userText, draft, body, m){
   finally { clearTimeout(to); }
 }
 
-async function generate(chat, text, m, partial){
+const EXT = { html:'html', javascript:'js', js:'js', python:'py', py:'py', css:'css', json:'json', java:'java', cpp:'cpp', 'c++':'cpp', c:'c', ts:'ts', typescript:'ts', sh:'sh', bash:'sh', sql:'sql', lua:'lua', csharp:'cs', cs:'cs', go:'go', rust:'rs', php:'php', ruby:'rb' };
+function histMsg(x){
+  if (x.role === 'ai') return { role:'assistant', content:x.text };
+  const imgs = (x.files || []).filter(f => f.kind === 'image').map(f => f.name);
+  return { role:'user', content: x.text + (x.ctx ? '\n\n' + x.ctx : '') + (imgs.length ? '\n(The user attached image(s) earlier: ' + imgs.join(', ') + '; they are no longer visible.)' : '') };
+}
+
+async function generate(chat, text, m, partial, mode, att){
+  mode = mode || 'auto'; att = att || { imgs:[], ctx:'' };
   sendBtn.disabled = true; state.generating = true;
+  state.hard = mode !== 'auto' || att.imgs.length > 0 || text.length > 600;
   const aiMsg = addMsg('ai', '', { name:m.name, owner:m.owner, logo:m.logo });
   const body = aiMsg.querySelector('.body');
   showThinking(body, partial ? 'Resuming' : 'Thinking');
   if (partial) body.insertAdjacentHTML('beforeend', `<div class="resumed">${renderMd(partial)}</div>`);
-  setPending({ chatId:chat.id, text, modelId:m.id, freq:state.freq, partial:partial || '' });
+  const pend = p => setPending({ chatId:chat.id, text, modelId:m.id, freq:state.freq, mode, hadImages:att.imgs.length > 0, partial:p });
+  pend(partial || '');
 
   /* ask Chrome not to freeze this tab while it is generating (works where Web Locks exist) */
   let releaseLock = null;
   try { if (navigator.locks) navigator.locks.request('spiral-generating', () => new Promise(r => { releaseLock = r; })); } catch(e){}
 
-  /* full conversation memory: the AI sees the earlier messages of this chat */
-  const history = chat.msgs.slice(-13, -1).map(x => ({ role: x.role === 'ai' ? 'assistant' : 'user', content: x.text }));
+  const history = chat.msgs.slice(-13, -1).map(histMsg);
+  const full = text + (att.ctx ? '\n\n' + att.ctx : '');
+  const userContent = att.imgs.length ? [{ type:'text', text:full }, ...att.imgs.map(u => ({ type:'image_url', image_url:{ url:u } }))] : full;
+  const fp = FREQS[state.freq].prefix.trim();
   const convo = () => [
-    { role:'system', content: systemPrompt() + (FREQS[state.freq].prefix ? '\n\nStyle setting: ' + FREQS[state.freq].prefix.trim() + ' This is a background setting: never mention it or acknowledge it, just follow it silently.' : '') },
+    { role:'system', content: systemPrompt(mode) + (fp ? '\n\nStyle setting: ' + fp + ' This is a background setting: never mention it or acknowledge it, just follow it silently.' : '') },
     ...history,
-    { role:'user', content: text },
+    { role:'user', content:userContent },
   ];
   let out = '', reasoning = '', lastSave = 0;
   try {
@@ -779,9 +876,10 @@ async function generate(chat, text, m, partial){
       await aiStream(convo(), chunk => {
         out += chunk;
         body.innerHTML = renderMd(out);
+        const lp = body.querySelector('.filecard.live .fcpre'); if (lp) lp.scrollTop = lp.scrollHeight;
         window.scrollTo({ top: document.body.scrollHeight });
         const now = Date.now();
-        if (now - lastSave > 800){ lastSave = now; setPending({ chatId:chat.id, text, modelId:m.id, freq:state.freq, partial:out }); }
+        if (now - lastSave > 800){ lastSave = now; pend(out); }
       }, r => {
         if (out) return;
         reasoning += r;
@@ -789,15 +887,19 @@ async function generate(chat, text, m, partial){
         if (el) el.textContent = reasoning.slice(-160).replace(/\s+/g, ' ');
       });
     } catch(e1){
-      if (out) throw e1;
+      if (out || hasImage(convo())) throw e1;
       out = await aiChat(convo());
+    }
+    if (mode === 'file' && !/FILENAME:/.test(out) && /```/.test(out)){
+      const lm = out.match(/```([\w+#-]*)/);
+      out = 'FILENAME: spiral-code.' + (EXT[(lm && lm[1] || '').toLowerCase()] || 'txt') + '\n' + out.slice(out.indexOf('```'));
     }
     body.innerHTML = renderMd(out);
     const saved = { role:'ai', text:out, who:{ name:m.name, owner:m.owner, logo:m.logo } };
     chat.msgs.push(saved);
     saveChats();
     maybeTitle(chat, text);
-    if (m.smart && /```/.test(out)) await selfReview(saved, text, out, body, m);
+    if (m.smart && /```/.test(out)) await selfReview(saved, text, out, body, m, mode);
   } catch(err) {
     const msg = err && err.name === 'AbortError' ? 'The AI took too long. Try a lower frequency.' : (err && err.message) || 'Unknown error';
     body.innerHTML = `<span style="color:#ff8a80">${escapeHtml(m.name)} failed: ${escapeHtml(msg)}</span>`;
@@ -809,15 +911,99 @@ async function generate(chat, text, m, partial){
   }
 }
 
+/* ===== "What should the code be?" question, shown before any code is written ===== */
+const CODE_VERB = '(?:make|create|build|write|generate|code|develop|program|design|implement|script|fix|debug|refactor|convert|update|improve|faz(?:er)?|fa[cç]a|cri(?:e|ar)|gere|gerar|escreva|escrever|monte|montar|programe|programar|desenvolv\\w*|corrig\\w*|conserte|melhore|adicione)';
+const CODE_NOUN = '(?:game|jogo|app|aplicativo|website|web ?site|site|page|p[aá]gina|landing|script|program|programa|code|c[oó]digo|bot|tool|ferramenta|calculator|calculadora|function|fun[cç][aã]o|class|component|extension|extens[aã]o|plugin|api|dashboard|ui|interface|html|css|javascript|js|python|java|typescript|sql|react|node|userscript|macro|automa[cç][aã]o|overlay|menu|mod)';
+const CODE_RE = new RegExp('\\b' + CODE_VERB + '\\b[\\s\\S]{0,80}?\\b' + CODE_NOUN + '\\b', 'i');
+const NOT_CODE_RE = /\b(story|poem|essay|email|e-mail|letter|song|lyrics|hist[oó]ria|poema|reda[cç][aã]o|carta|m[uú]sica)\b/i;
+const codeIntent = t => CODE_RE.test(t) && !NOT_CODE_RE.test(t);
+function dismissAsk(){ if (state.ask){ state.ask.el.remove(); state.ask = null; clearPending(); } }
+function showCodeAsk(chat, text, m, att){
+  dismissAsk();
+  const d = document.createElement('div'); d.className = 'msg ai askcard';
+  d.innerHTML = `<div class="who">${m.logo ? `<img src="${m.logo}" onerror="this.style.display='none'">` : ''}${escapeHtml(m.name)}</div>
+    <div class="askq">What should the code be?</div>
+    <button class="askopt" data-mode="file" type="button"><b>A</b><span><i>A downloadable file</i><small>Watch it being written, then tap to download</small></span></button>
+    <button class="askopt" data-mode="code" type="button"><b>B</b><span><i>Code only</i><small>A code box to copy and paste</small></span></button>`;
+  messagesEl.appendChild(d); document.body.classList.add('has-messages');
+  window.scrollTo({ top: document.body.scrollHeight, behavior:'smooth' });
+  setPending({ chatId:chat.id, text, modelId:m.id, freq:state.freq, ask:true, hadImages:att.imgs.length > 0 });
+  state.ask = { el:d };
+  sendBtn.disabled = false; state.generating = false;
+  d.querySelectorAll('.askopt').forEach(b => b.onclick = () => { const mode = b.dataset.mode; d.remove(); state.ask = null; generate(chat, text, state.model, '', mode, att); });
+}
+
+/* ===== attachments: the + button ===== */
+const fileIn = $('#fileIn'), tray = $('#attachTray'), toastEl = $('#toast');
+const TEXT_EXT = /\.(txt|md|markdown|json|csv|tsv|js|mjs|ts|jsx|tsx|html|htm|css|scss|py|java|c|h|cpp|hpp|cs|go|rs|php|rb|sh|bat|sql|xml|yml|yaml|toml|ini|cfg|log|lua|kt|swift|vue|svelte)$/i;
+let toastT = 0;
+function toast(msg){ toastEl.textContent = msg; toastEl.classList.add('show'); clearTimeout(toastT); toastT = setTimeout(() => toastEl.classList.remove('show'), 2800); }
+function fileToImage(file){
+  return new Promise((res, rej) => {
+    const fr = new FileReader();
+    fr.onerror = rej;
+    fr.onload = () => {
+      const im = new Image();
+      im.onerror = rej;
+      im.onload = () => {
+        const mk = (max, q, flat) => { const k = Math.min(1, max / Math.max(im.width, im.height)), c = document.createElement('canvas'); c.width = Math.max(1, Math.round(im.width * k)); c.height = Math.max(1, Math.round(im.height * k)); const x = c.getContext('2d'); if (flat){ x.fillStyle = '#fff'; x.fillRect(0, 0, c.width, c.height); } x.drawImage(im, 0, 0, c.width, c.height); return c.toDataURL('image/jpeg', q); };
+        res({ dataUrl: mk(1280, .85, true), thumb: mk(120, .6, true) });
+      };
+      im.src = fr.result;
+    };
+    fr.readAsDataURL(file);
+  });
+}
+async function addFiles(list){
+  for (const f of [...list]){
+    if (state.attach.length >= 4){ toast('Up to 4 files at a time.'); break; }
+    if (f.size > 12 * 1024 * 1024){ toast(f.name + ' is too big (max 12 MB).'); continue; }
+    try {
+      if (f.type.startsWith('image/')){
+        const r = await fileToImage(f);
+        state.attach.push({ name:f.name || 'image', kind:'image', dataUrl:r.dataUrl, thumb:r.thumb });
+      } else if (f.type.startsWith('text/') || f.type === 'application/json' || TEXT_EXT.test(f.name)){
+        const t = await f.text();
+        if (/\u0000/.test(t.slice(0, 2000))) throw new Error('binary');
+        state.attach.push({ name:f.name, kind:'text', text: t.slice(0, 60000) + (t.length > 60000 ? '\n...[file cut: too long]' : '') });
+      } else toast(f.name + ': only images and text or code files are supported.');
+    } catch(e){ toast('Could not read ' + (f.name || 'that file') + '.'); }
+  }
+  renderTray();
+}
+function renderTray(){
+  tray.innerHTML = '';
+  state.attach.forEach((a, i) => {
+    const c = document.createElement('div'); c.className = 'achip';
+    c.innerHTML = (a.kind === 'image' ? `<img src="${a.thumb}">` : '<span class="aico"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#bbb" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/></svg></span>') + `<span class="anm">${escapeHtml(a.name)}</span><button type="button" aria-label="remove">&times;</button>`;
+    c.querySelector('button').onclick = () => { state.attach.splice(i, 1); renderTray(); };
+    tray.appendChild(c);
+  });
+}
+$('#plusBtn').onclick = () => fileIn.click();
+fileIn.onchange = () => { addFiles(fileIn.files); fileIn.value = ''; };
+inputEl.addEventListener('paste', e => { const fs = e.clipboardData && e.clipboardData.files; if (fs && fs.length){ e.preventDefault(); addFiles(fs); } });
+
 async function send(){
-  const text = inputEl.value.trim();
-  if (!text || state.generating) return;
-  closePopups();
-  inputEl.value = ''; autoGrow();
-  addMsg('user', text);
+  let text = inputEl.value.trim();
+  const files = state.attach.slice();
+  if ((!text && !files.length) || state.generating) return;
+  if (!text) text = 'Please look at the attached file(s) and tell me what is going on.';
+  dismissAsk(); closePopups();
+  inputEl.value = ''; autoGrow(); state.attach = []; renderTray();
+  const imgs = files.filter(f => f.kind === 'image'), txts = files.filter(f => f.kind === 'text');
+  const ctx = txts.map(f => '--- Attached file: ' + f.name + ' ---\n' + f.text + '\n--- end of ' + f.name + ' ---').join('\n\n');
+  const meta = files.map(f => ({ name:f.name, kind:f.kind, thumb:f.thumb || '' }));
+  addMsg('user', text, null, true, meta);
   sendBtn.disabled = true; state.generating = true;
-  const chat = await ensureChat(text);
-  generate(chat, text, state.model, '');
+  const chat = await ensureChat(text, meta, ctx);
+  const att = { imgs: imgs.map(i => i.dataUrl), ctx };
+  if (codeIntent(text)){
+    if (/\b(download(able)?|baixar|baix[aá]vel)\b/i.test(text)) return generate(chat, text, state.model, '', 'file', att);
+    if (/\b(only the code|just the code|code only|copy and paste|copy\/paste|s[oó] o c[oó]digo|apenas o c[oó]digo)\b/i.test(text)) return generate(chat, text, state.model, '', 'code', att);
+    return showCodeAsk(chat, text, state.model, att);
+  }
+  generate(chat, text, state.model, '', 'auto', att);
 }
 sendBtn.onclick = send;
 
@@ -839,7 +1025,10 @@ if (state.chats.length) loadChat(state.chats[state.chats.length-1].id);
   syncPills();
   if (state.chatId !== chat.id) loadChat(chat.id);
   state.titlePending = chat.title === 'New chat';
-  generate(chat, last.text, state.model, pj.partial || '');
+  const att = { imgs: [], ctx: last.ctx || '' };
+  if (pj.hadImages){ clearPending(); return; }
+  if (pj.ask){ showCodeAsk(chat, last.text, state.model, att); return; }
+  generate(chat, last.text, state.model, pj.partial || '', pj.mode || 'auto', att);
 })();
 </script>
 </body>
